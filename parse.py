@@ -64,6 +64,7 @@ def extract_webanswer_parts(
         # return [webanswer.get('Snippet', '') for webanswer in extracted_webanswer_array]
         return extracted_webanswer_array
     except Exception as e:
+        logger.info(f"exception in extract_webanswer_parts, {e}")
         return []
 
 
@@ -87,7 +88,11 @@ if __name__ == "__main__":
     df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x, args.videoType))
     logger.info(f"==> Exploding dataframe for each query-webanswer pair")
     df = df.explode('webanswers').dropna()
+    row_count = df.shape[0]
+    logger.info(f"==> exploding rows {row_count}")
     df['url'] = pd.DataFrame(df['webanswers'].tolist(), index=df.index)
+    row_count = df.shape[0]
+    logger.info(f"==> join url column total rows {row_count}")
     logger.info(f"==> Saving output file {args.output}")
     df[['query', 'url']].to_csv(
         args.output,
