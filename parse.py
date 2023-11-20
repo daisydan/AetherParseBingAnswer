@@ -51,17 +51,16 @@ def extract_short_answer_from_pbjson(
 
 
 def extract_webanswer_parts(
-        encoded_base64_pbjson: str) -> List[str]:
+        encoded_base64_pbjson: str, videoType: int) -> List[str]:
     """Extract specified columns from webanswers."""
     try:
         decoded_pbjson: JsonDict = decode_base64_pbjson(encoded_base64_pbjson)
-        extracted_webanswer_array: JsonList = extract_answer_from_pbjson(decoded_pbjson)
-        # if videoType == 0:    # bing answer
-        #     extracted_webanswer_array: JsonList = extract_answer_from_pbjson(decoded_pbjson)
-        # elif videoType == 1:   # short answer
-        #     extracted_webanswer_array: JsonList = extract_short_answer_from_pbjson(decoded_pbjson)
-        # else:   # NotImplemeted
-        #     return []
+        if videoType == 0:    # bing answer
+            extracted_webanswer_array: JsonList = extract_answer_from_pbjson(decoded_pbjson)
+        elif videoType == 1:   # short answer
+            extracted_webanswer_array: JsonList = extract_short_answer_from_pbjson(decoded_pbjson)
+        else:   # NotImplemeted
+            return []
         # return [webanswer.get('Snippet', '') for webanswer in extracted_webanswer_array]
         return extracted_webanswer_array
     except Exception as e:
@@ -72,7 +71,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', required=True, type=str)
     parser.add_argument('--output', required=True, type=str)
-    # parser.add_argument('--videoType', required=False, type=int)
+    parser.add_argument('--videoType', required=True, type=int)
     args = parser.parse_args()
 
     logger.info(f"==> Loading input file {args.input}")
@@ -85,7 +84,7 @@ if __name__ == "__main__":
         # base64response	isadultquery	isnoresults	language	position	query	region	scrapejobengineid
     )
     logger.info(f"==> Parsing base64 pbjson and extracting webanswers")
-    df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x))
+    df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x, args.videoType))
     logger.info(f"==> Exploding dataframe for each query-webanswer pair")
     df = df.explode('webanswers').dropna()
     df['url'] = pd.DataFrame(df['webanswers'].tolist(), index=df.index)
