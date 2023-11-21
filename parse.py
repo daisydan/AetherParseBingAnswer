@@ -73,7 +73,7 @@ def extract_webanswer_parts(
 def extract(input_path: str, videoType: int, topN: int) -> List[str]:
     """Extract specified columns from webanswers."""
     rets = ['query\turl']
-    fin = open(input_path, 'r')
+    fin = open(input_path, 'r', encoding='utf8')
     fin.readline()  # header
     count = 0
     while True:
@@ -125,35 +125,38 @@ if __name__ == "__main__":
     parser.add_argument('--output', required=True, type=str)
     parser.add_argument('--videoType', required=True, type=int)
     parser.add_argument('--topN', required=True, type=int)
+    parser.add_argument('--byline', required=True, type=int)
     args = parser.parse_args()
 
     logger.info(f"==> Loading input file {args.input}")
-    rets = extract(args.input, args.videoType, args.topN)
-    row_count = len(rets)
-    logger.info(f"==> exploding rows {row_count}")
-    logger.info(f"==> Saving output file {args.output}")
-    with open(args.output, 'w') as fout:
-        fout.write('\n'.join(rets))
-    # df = pd.read_csv(
-    #     args.input,
-    #     sep='\t',
-    #     encoding='utf8',
-    #     quoting=csv.QUOTE_NONE,
-    #     usecols=['query','base64response']
-    #     # base64response	isadultquery	isnoresults	language	position	query	region	scrapejobengineid
-    # )
-    # logger.info(f"==> Parsing base64 pbjson and extracting webanswers")
-    # df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x, args.videoType, args.topN))
-    # logger.info(f"==> Exploding dataframe for each query-webanswer pair")
-    # df = df.explode('webanswers').dropna()
-    # df['url'] = pd.DataFrame(df['webanswers'], index=df.index)
-    # row_count = df.shape[0]
-    # logger.info(f"==> exploding rows {row_count}")
-    # logger.info(f"==> Saving output file {args.output}")
-    # df[['query', 'url']].to_csv(
-    #     args.output,
-    #     sep ='\t',
-    #     encoding='utf8',
-    #     quoting=csv.QUOTE_NONE,
-    #     index=False
-    # )
+    if args.byline == 1:
+        rets = extract(args.input, args.videoType, args.topN)
+        row_count = len(rets)
+        logger.info(f"==> exploding rows {row_count}")
+        logger.info(f"==> Saving output file {args.output}")
+        with open(args.output, 'w') as fout:
+            fout.write('\n'.join(rets))
+    else:
+        df = pd.read_csv(
+            args.input,
+            sep='\t',
+            encoding='utf8',
+            quoting=csv.QUOTE_NONE,
+            usecols=['query','base64response']
+            # base64response	isadultquery	isnoresults	language	position	query	region	scrapejobengineid
+        )
+        logger.info(f"==> Parsing base64 pbjson and extracting webanswers")
+        df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x, args.videoType, args.topN))
+        logger.info(f"==> Exploding dataframe for each query-webanswer pair")
+        df = df.explode('webanswers').dropna()
+        df['url'] = pd.DataFrame(df['webanswers'], index=df.index)
+        row_count = df.shape[0]
+        logger.info(f"==> exploding rows {row_count}")
+        logger.info(f"==> Saving output file {args.output}")
+        df[['query', 'url']].to_csv(
+            args.output,
+            sep ='\t',
+            encoding='utf8',
+            quoting=csv.QUOTE_NONE,
+            index=False
+        )
