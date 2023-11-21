@@ -134,7 +134,7 @@ if __name__ == "__main__":
         row_count = len(rets)
         logger.info(f"==> exploding rows {row_count}")
         logger.info(f"==> Saving output file {args.output}")
-        with open(args.output, 'w') as fout:
+        with open(args.output, 'w', encoding='utf8') as fout:
             fout.write('\n'.join(rets))
     else:
         df = pd.read_csv(
