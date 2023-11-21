@@ -86,7 +86,7 @@ def extract(input_path: str, videoType: int, topN: int) -> List[str]:
         try:
             items = line.split('\t')
             decoded_pbjson = decode_base64_pbjson(items[0])
-            query = items[5]
+            query = items[1]
             results = decoded_pbjson['PropertyBag']['AnswerResponseCommand']['AnswerQueryResponse']['AnswerDataArray']
             has_answer = False
             for result in results:
