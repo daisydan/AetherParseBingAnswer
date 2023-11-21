@@ -68,7 +68,56 @@ def extract_webanswer_parts(
     except Exception as e:
         logger.info(f"exception in extract_webanswer_parts, {e}")
         return []
+    
 
+def extract(input_path: str, videoType: int, topN: int) -> List[str]:
+    """Extract specified columns from webanswers."""
+    rets = ['query\turl']
+    fin = open(input_path, 'r')
+    fin.readline()  # header
+    count = 0
+    while True:
+        count += 1
+        # Get next line from file
+        line = fin.readline()
+        if not line:
+            break
+        # import pdb; pdb.set_trace()
+        try:
+            items = line.split('\t')
+            decoded_pbjson = decode_base64_pbjson(items[0])
+            query = items[5]
+            results = decoded_pbjson['PropertyBag']['AnswerResponseCommand']['AnswerQueryResponse']['AnswerDataArray']
+            has_answer = False
+            for result in results:
+                ret = ''
+                if videoType == 0:  # bing answer
+                    if result.get('AnswerServiceName', None)  == 'MultimediaKifVideoAnswer':
+                        videos = result['AnswerDataKifResponse'][0]['results']
+                        topk = ''
+                        if len(videos) > 0:
+                            topk = json.dumps(videos[:topN])
+                        ret = f'{query}\t{topk}'
+                elif videoType == 1:    # bing short answer
+                    if result.get('AnswerServiceName', None)  == 'MultimediaShortVideoAnswer':
+                        videos = result['AnswerDataKifResponse'][0]['webResults']
+                        topk = ''
+                        if len(videos) > 0:
+                            topk = json.dumps(videos[:topN])
+                        ret = f'{query}\t{topk}'
+                else:
+                    continue
+                if ret != '':
+                    rets.append(ret)
+                    has_answer = True
+                    break
+            if not has_answer:
+                rets.append(f'{query}\t')
+        except Exception as e:
+            logger.info(f"exception in extract_webanswer_parts, {e}")
+            continue
+
+    return rets
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -79,26 +128,32 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.info(f"==> Loading input file {args.input}")
-    df = pd.read_csv(
-        args.input,
-        sep='\t',
-        encoding='utf8',
-        quoting=csv.QUOTE_NONE,
-        usecols=['query','base64response']
-        # base64response	isadultquery	isnoresults	language	position	query	region	scrapejobengineid
-    )
-    logger.info(f"==> Parsing base64 pbjson and extracting webanswers")
-    df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x, args.videoType, args.topN))
-    logger.info(f"==> Exploding dataframe for each query-webanswer pair")
-    df = df.explode('webanswers').dropna()
-    df['url'] = pd.DataFrame(df['webanswers'], index=df.index)
-    row_count = df.shape[0]
+    rets = extract(args.input, args.videoType, args.topN)
+    row_count = len(rets)
     logger.info(f"==> exploding rows {row_count}")
     logger.info(f"==> Saving output file {args.output}")
-    df[['query', 'url']].to_csv(
-        args.output,
-        sep ='\t',
-        encoding='utf8',
-        quoting=csv.QUOTE_NONE,
-        index=False
-    )
+    with open(args.output, 'w') as fout:
+        fout.write('\n'.join(rets))
+    # df = pd.read_csv(
+    #     args.input,
+    #     sep='\t',
+    #     encoding='utf8',
+    #     quoting=csv.QUOTE_NONE,
+    #     usecols=['query','base64response']
+    #     # base64response	isadultquery	isnoresults	language	position	query	region	scrapejobengineid
+    # )
+    # logger.info(f"==> Parsing base64 pbjson and extracting webanswers")
+    # df['webanswers'] = df['base64response'].apply(lambda x: extract_webanswer_parts(x, args.videoType, args.topN))
+    # logger.info(f"==> Exploding dataframe for each query-webanswer pair")
+    # df = df.explode('webanswers').dropna()
+    # df['url'] = pd.DataFrame(df['webanswers'], index=df.index)
+    # row_count = df.shape[0]
+    # logger.info(f"==> exploding rows {row_count}")
+    # logger.info(f"==> Saving output file {args.output}")
+    # df[['query', 'url']].to_csv(
+    #     args.output,
+    #     sep ='\t',
+    #     encoding='utf8',
+    #     quoting=csv.QUOTE_NONE,
+    #     index=False
+    # )
