@@ -75,9 +75,14 @@ def convert_length_to_unix_ts(lengthstring):
     # create a datetime object with the desired date and time
     try:
         items = lengthstring.split(':')
-        min, sec = int(items[0]), int(items[1])
-        dt_start = datetime.datetime(2023, 11, 14, 0, 0)
-        dt_end = datetime.datetime(2023, 11, 14, min, sec)
+        sec = int(items[-1])
+        hr, min = 0, 0
+        if len(items) > 1:
+            min = int(items[-2])
+        if len(items) > 2:
+            hr = int(items[-3])
+        dt_start = datetime.datetime(2023, 11, 14, 0, 0, 0)
+        dt_end = datetime.datetime(2023, 11, 14, hr, min, sec)
 
         # convert the datetime object to seconds since epoch
         ts_start = time.mktime(dt_start.timetuple())
