@@ -151,6 +151,8 @@ def parse_bingShortAnswer_row(record):
         elif mediaSourceTitle == '':
             mediaSourceTitle = 'none'
         length = record.get('TimeLength', -1)   # "15:00"
+        if length != -1:
+            length /= 1000
         PubDate = record.get('DAPublicationDate', -1)
         viewcount = record.get('ViewCount', -1)
         PubUser = record.get('DAPubUser', 'none')
